@@ -1,0 +1,8 @@
+# Local Python environment and bytecode.
+.venv/
+__pycache__/
+*.py[cod]
+
+# Default generated solver exports; keep input maps and deliberate examples.
+/solution.json
+/kaiju-solution.json

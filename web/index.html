@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kaiju Cat Planner</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main>
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">15 TURNS / THREE CATS / ONE PLAN</p>
+        <h1>Kaiju Cat Planner</h1>
+        <p class="intro">Recreate your map. Find the highest-scoring command placement.</p>
+      </div>
+      <span class="budget-pill">$200 command budget</span>
+    </header>
+
+    <div id="error" class="message error" role="alert" hidden></div>
+    <noscript><p class="message error">Enable JavaScript to edit maps and run the solver.</p></noscript>
+
+    <section class="panel" aria-labelledby="editor-heading">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">01 / BUILD YOUR MAP</p>
+          <h2 id="editor-heading">Choose a tile, then paint the grid</h2>
+        </div>
+        <div class="toolbar">
+          <button id="example" type="button" disabled>Example</button>
+          <button id="clear" type="button" disabled>Clear tiles</button>
+          <button id="import" type="button" disabled>Load JSON</button>
+          <button id="export-map" type="button" disabled>Save map</button>
+          <input id="map-file" type="file" accept=".json,application/json" hidden>
+        </div>
+      </div>
+      <div id="palette" class="palette" role="group" aria-label="Tile palette"></div>
+      <div id="editor-grid" class="board" role="group" aria-label="Editable game map"></div>
+      <p class="hint">Cats, beds, and out-of-bounds cells are locked. Tile counts may vary.
+        Row and column numbers match the command map below.</p>
+      <div class="solve-controls">
+        <label for="time-limit">Search limit
+          <select id="time-limit" disabled>
+            <option value="">Until optimality is proved</option>
+            <option value="30">30 seconds</option>
+            <option value="120">2 minutes</option>
+            <option value="600">10 minutes</option>
+          </select>
+        </label>
+        <button id="solve" class="primary" type="button" disabled>Find optimal placement</button>
+        <button id="cancel" class="stop" type="button" disabled>Stop search</button>
+      </div>
+      <p class="hint">Some maps take much longer than others. Stop at any time to keep the best
+        placement found. A time-limited or stopped search is not necessarily optimal.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="results-heading">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">02 / COMMAND PLACEMENT</p>
+          <h2 id="results-heading">Your solution</h2>
+        </div>
+        <button id="download" type="button" disabled>Download solution</button>
+      </div>
+      <p id="status" class="status" role="status" aria-live="polite">Loading the map editor...</p>
+      <div class="metrics">
+        <div><span>Best score</span><strong id="score">--</strong></div>
+        <div><span title="A valid ceiling on the best possible score">Upper bound</span><strong id="bound">--</strong></div>
+        <div><span>Command cost</span><strong id="cost">--</strong></div>
+        <div><span>Elapsed</span><strong id="elapsed">--</strong></div>
+      </div>
+      <div id="results" hidden>
+        <section class="placement" aria-labelledby="placement-heading">
+          <div class="placement-header">
+            <h3 id="placement-heading">Command map</h3>
+            <span id="placement-count" class="hint"></span>
+          </div>
+          <p id="placement-help" class="hint">Copy the highlighted slots onto the matching tiles before
+            starting the game. Top is floor 2; bottom, or a plant's only floor, is floor 1.
+            Leave slots marked None empty.</p>
+          <div class="placement-legend" aria-label="Command legend">
+            <span>
+              <span class="legend-icons" aria-hidden="true">
+                <img class="command-icon" src="/icons/north.png" alt="" width="32" height="36">
+                <img class="command-icon" src="/icons/east.png" alt="" width="32" height="36">
+                <img class="command-icon" src="/icons/south.png" alt="" width="32" height="36">
+                <img class="command-icon" src="/icons/west.png" alt="" width="32" height="36">
+              </span>
+              Turn
+            </span>
+            <span class="legend-stomp">
+              <img class="command-icon" src="/icons/stomp.png" alt="" width="32" height="36">
+              Stomp
+            </span>
+            <span class="legend-power">
+              <img class="command-icon" src="/icons/power_up.png" alt="" width="32" height="36">
+              Power Up (+1000)
+            </span>
+          </div>
+          <div id="placement-grid" class="board placement-grid" role="group"
+            aria-label="Command placement map" aria-describedby="placement-help"></div>
+        </section>
+        <details id="command-table" class="command-table">
+          <summary>Show command table</summary>
+          <div class="table-wrap">
+            <table>
+              <caption>Leave every unlisted command slot empty. Floors are destroyed from top to bottom.</caption>
+              <thead><tr><th>Row, column</th><th>Tile</th><th>Top floor (2)</th><th>Bottom / only floor (1)</th></tr></thead>
+              <tbody id="commands"></tbody>
+            </table>
+          </div>
+        </details>
+        <div class="table-wrap">
+          <table class="cats-table">
+            <caption>Final cat results after turn 15</caption>
+            <thead><tr><th>Cat</th><th>Bed arrival</th><th>Final power</th><th>State</th></tr></thead>
+            <tbody id="cats"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="replay-panel" class="panel" aria-labelledby="replay-heading" hidden>
+      <p class="eyebrow">03 / FOLLOW THE ROUTE</p>
+      <h2 id="replay-heading">Turn-by-turn replay</h2>
+      <div class="replay-controls">
+        <button id="previous" type="button" aria-label="Previous turn">Previous</button>
+        <label for="turn">Turn <output id="turn-label" for="turn">15</output> / 15</label>
+        <input id="turn" type="range" min="0" max="15" value="15">
+        <button id="next" type="button" aria-label="Next turn">Next</button>
+      </div>
+      <div id="replay-grid" class="board" role="group" aria-label="Replay map"></div>
+      <p id="replay-summary" class="hint"></p>
+      <ul id="events" class="events"></ul>
+    </section>
+
+    <footer>All searches run locally. Fights happen before tile effects.
+      Ties and simultaneous bed arrivals use Red, Green, Blue priority.
+      Spike rounding in the game is unconfirmed; this planner uses exact halves.</footer>
+  </main>
+</body>
+</html>
